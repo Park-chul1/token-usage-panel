@@ -12,11 +12,16 @@ function label(text, style = '') {
     return new St.Label({text, y_align: Clutter.ActorAlign.CENTER, style});
 }
 function meter(width, height = 6) {
-    const track = new St.Widget({layout_manager: new Clutter.BinLayout(),
-        width, height, y_align: Clutter.ActorAlign.CENTER,
-        style: `background-color: #39414c; border-radius: ${height/2}px;`});
-    const fill = new St.Widget({width: 0, height, x_align: Clutter.ActorAlign.START,
-        y_align: Clutter.ActorAlign.CENTER});
+    // A horizontal box anchors the fill at the leading edge; BinLayout can
+    // center a non-expanding child regardless of its requested x alignment.
+    const track = new St.BoxLayout({
+        width, height, x_expand: false, y_expand: false,
+        y_align: Clutter.ActorAlign.CENTER,
+        style: `background-color: #39414c; border-radius: ${height/2}px; padding: 0; spacing: 0;`});
+    track.set_text_direction(St.TextDirection.LTR);
+    const fill = new St.Widget({width: 0, height,
+        x_expand: false, y_expand: false,
+        x_align: Clutter.ActorAlign.START, y_align: Clutter.ActorAlign.CENTER});
     track.add_child(fill);
     return {track, fill, width, height};
 }
@@ -28,7 +33,8 @@ function paint(bar, state) {
 export default class AIUsage extends Extension {
     enable() {
         this._button = new PanelMenu.Button(0.0, 'AI Usage: remaining allowance and API spending', false);
-        const box = new St.BoxLayout({style: 'spacing: 8px;'});
+        const box = new St.BoxLayout({y_align: Clutter.ActorAlign.CENTER,
+            style: 'spacing: 8px;'});
         this._quotaLabel = label('Codex …');
         this._bar = meter(64);
         this._weekly = label('');
