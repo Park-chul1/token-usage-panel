@@ -18,7 +18,6 @@ function meter(width, height = 6) {
         width, height, x_expand: false, y_expand: false,
         y_align: Clutter.ActorAlign.CENTER,
         style: `background-color: #39414c; border-radius: ${height/2}px; padding: 0; spacing: 0;`});
-    track.set_text_direction(Clutter.TextDirection.LTR);
     const fill = new St.Widget({width: 0, height,
         x_expand: false, y_expand: false,
         x_align: Clutter.ActorAlign.START, y_align: Clutter.ActorAlign.CENTER});
