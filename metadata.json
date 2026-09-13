@@ -1,0 +1,9 @@
+{
+  "uuid": "ai-usage@local",
+  "name": "AI Usage",
+  "description": "Codex remaining quota bars and OpenAI API spending with a local reset counter",
+  "shell-version": [
+    "50"
+  ],
+  "version": 2
+}
