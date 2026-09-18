@@ -69,7 +69,8 @@ export default class AIUsage extends Extension {
         paint(this._bar, s);
         this._weekly.text = secondary ? `${duration(secondary.minutes)} ${windowState(secondary, q).text}` : '';
         this._weekly.visible = !!secondary;
-        this._apiLabel.text = `API ${a.display_period === 'since_reset' ? '↺ ' : ''}${apiText(a)}`;
+        const monthlyApi = Number.isFinite(a.month_usd) ? {...a, display_usd: a.month_usd} : a;
+        this._apiLabel.text = `API ${apiText(monthlyApi)}`;
         this._apiLabel.style = '';
         this._button.accessible_name = `${this._quotaLabel.text} 남음, ${this._weekly.text}, ${this._apiLabel.text} 사용 금액`;
         this._renderMenu();
@@ -94,23 +95,12 @@ export default class AIUsage extends Extension {
         }
         if (!q.buckets?.length) this._line('한도 확인 필요 · Codex 로그인과 설치 경로 확인');
         if (q.status === 'error') this._line(`조회 실패: ${q.error}`, true);
-        if (q.updated) this._line(`마지막 확인 ${new Date(q.updated*1000).toLocaleString()}`, true);
         this._button.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this._line('OPENAI API · 사용 금액');
-        this._line(`${a.display_period === 'since_reset' ? '초기화 이후' : '이번 달'}  ${apiText(a)}`);
-        if (a.month_usd !== undefined) {
-            this._line(`오늘 $${a.today_usd.toFixed(4)} · 이번 달 $${a.month_usd.toFixed(4)}`, true);
-            if (a.reset_at) this._line(`표시 초기화 ${new Date(a.reset_at*1000).toLocaleString()}`, true);
-            this._line(`마지막 확인 ${new Date(a.updated*1000).toLocaleString()}`, true);
-            for (const [name, v] of Object.entries(a.models ?? {}).slice(0, 8))
-                this._line(`${name}: 입력 ${v.input.toLocaleString()} / 출력 ${v.output.toLocaleString()}`, true);
-        }
+        const monthlyApi = Number.isFinite(a.month_usd) ? {...a, display_usd: a.month_usd} : a;
+        this._line(`이번 달  ${apiText(monthlyApi)}`);
         if (a.status === 'unconfigured') this._line('Admin API key 연결 필요', true);
         if (a.status === 'error') this._line(`갱신 실패: ${a.error} · 이전 값`, true);
-        this._line('조직 전체 · UTC 기준 · 서버 집계 지연 가능', true);
-        this._button.menu.addAction('API 표시 사용량 초기화', () => this._action('--reset-api'));
-        if (a.display_period === 'since_reset')
-            this._button.menu.addAction('이번 달 사용 금액으로 돌아가기', () => this._action('--monthly-api'));
         this._button.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this._button.menu.addAction('새로고침', () => this._refresh(true));
         this._button.menu.addAction('API 사용량 대시보드', () => this._open('https://platform.openai.com/usage'));

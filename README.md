@@ -10,8 +10,8 @@ MIT licensed. Korean UI. Independent; not endorsed by OpenAI or GNOME.
 - Menu: larger quota bars, countdowns and exact local reset times.
 - Green above 30%; amber at 30% or less; red at 10% or less.
 - Gray/warning for stale or failed snapshots. After expiry: `리셋 확인 중` until refreshed.
-- API: monthly spend by default. After reset: `API ↺ $0.00` and subsequent costs.
-- Menu always retains today's and this month's full spend and model token breakdown.
+- API: this month's spend.
+- Menu shows only this month's API spend.
 - Bars are read-only indicators, not draggable controls.
 
 ## Requirements
@@ -60,25 +60,9 @@ Paste the key into the hidden prompt and refresh the panel. If using a custom
 XDG_DATA_HOME, adjust the path above. Regular model-inference keys may not have
 permission to read organization usage/costs.
 
-### Reset button
-
-Click **API 표시 사용량 초기화** in the panel menu. The collector first fetches a
-fresh cost total and records it as the reference; subsequent display values are
-the difference from that total. A failed request leaves the previous reference
-intact. The counter works across month boundaries. Choose **이번 달 사용 금액으로
-돌아가기** to restore monthly display. Equivalent local commands:
-
-```bash
-python3 ~/.local/share/gnome-shell/extensions/ai-usage@local/collector.py --reset-api
-python3 ~/.local/share/gnome-shell/extensions/ai-usage@local/collector.py --monthly-api
-```
-
-**Reset changes only this tool's displayed cost counter. It does not change API
-billing records, credits, or Codex limits.** Model token rows remain monthly totals.
-API totals cover the key's whole organization. Today/month periods use UTC.
-Server reporting can be delayed: costs reported after reset can include earlier
-requests. Corrections may make a counter negative. This is not a live billing
-meter or credit-balance estimate. API refresh is cached for five minutes.
+API totals cover the key's whole organization and use UTC month boundaries.
+Server reporting can be delayed. This is not a live billing meter or
+credit-balance estimate; API refresh is cached for five minutes.
 
 ## Codex quota source
 
