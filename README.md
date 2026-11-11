@@ -1,12 +1,13 @@
 # Token Usage Panel
 
-A GNOME 50 extension with **remaining Codex quota bars** and **OpenAI API spending**.
+A GNOME 50 extension with **remaining Codex and Claude subscription quota** and **OpenAI API spending**.
 A local reset button lets you track spending from a new reference point.
 MIT licensed. Korean UI. Independent; not endorsed by OpenAI or GNOME.
 
 ## UI
 
 - Codex: remaining %, small panel bar, and a separate additional-window percentage.
+- Claude: remaining subscription percentage in the panel; five-hour and weekly windows in the menu.
 - Menu: larger quota bars, countdowns and exact local reset times.
 - Green above 30%; amber at 30% or less; red at 10% or less.
 - Gray/warning for stale or failed snapshots. After expiry: `리셋 확인 중` until refreshed.
@@ -63,6 +64,30 @@ permission to read organization usage/costs.
 API totals cover the key's whole organization and use UTC month boundaries.
 Server reporting can be delayed. This is not a live billing meter or
 credit-balance estimate; API refresh is cached for five minutes.
+
+## Claude 구독 한도 연결
+
+별도 Anthropic API 키나 유료 API 호출은 필요하지 않습니다. **Claude Code에 Claude 구독 계정으로 로그인**한 뒤, Claude Code가 공식 status line에 제공하는 한도 데이터를 이용합니다. 이 값은 남은 토큰 개수가 아니라 구독 사용 한도의 남은 **비율**입니다.
+
+1. 이 확장 프로그램을 설치한 다음 Claude Code를 최신 버전으로 업데이트하고 구독 계정으로 로그인합니다.
+2. `~/.claude/settings.json`에 아래 `statusLine` 항목을 추가합니다. 이미 다른 설정이 있다면 지우지 말고 JSON 객체 안에 항목만 추가하세요. `XDG_DATA_HOME`을 별도로 쓰는 경우 경로를 해당 설치 경로로 바꾸세요.
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "python3 \"$HOME/.local/share/gnome-shell/extensions/ai-usage@local/claude_status.py\""
+  }
+}
+```
+
+3. Claude Code를 다시 열고 대화에서 요청을 한 번 보내면, 응답 후 패널이 다음 갱신 때 한도를 표시합니다. Claude Code에서 한도 데이터가 제공되지 않으면 `확인 필요`로 표시됩니다. API 키 방식 로그인은 구독 한도를 제공하지 않습니다.
+
+이미 `statusLine`을 사용 중이라면 위 설정으로 덮어쓰지 마세요. 기존 명령과 이 스크립트가 **같은 stdin JSON**을 각각 받도록 별도 래퍼를 만들어 연결해야 합니다.
+
+이 방식은 Claude Code가 status line을 실행할 때만 갱신되므로, 종료 후 또는 웹에서만 사용하는 동안 최신 값이 아닐 수 있습니다. 5분이 지난 값은 회색과 `⚠`로 표시되고, 리셋 시각이 지나면 새 데이터가 도착할 때까지 `리셋 확인 중`으로 표시됩니다. 다중 계정을 번갈아 쓰면 마지막으로 데이터를 보낸 계정의 값이 표시됩니다. Claude Code의 지원 요금제 및 데이터 제공 조건은 [공식 문서](https://code.claude.com/docs/en/statusline)를 참고하세요.
+
+스크립트는 입력 전체 중 사용률과 리셋 시각만 로컬 캐시에 저장합니다. 대화, 계정 인증 정보, API 키는 저장하거나 전송하지 않습니다. 사용량 한도는 Anthropic이 제공하는 정보이며, 확장이 별도로 Claude에 네트워크 요청을 보내지 않습니다.
 
 ## Codex quota source
 

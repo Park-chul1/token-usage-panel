@@ -254,4 +254,6 @@ if __name__ == '__main__':
         force = '--refresh-api' in sys.argv or '--refresh' in sys.argv
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             q, a = pool.submit(quotas, force), pool.submit(api, force)
-            print(json.dumps({'quota': q.result(), 'api': a.result(), 'updated': time.time()}))
+            print(json.dumps({'quota': q.result(), 'api': a.result(),
+                              'claude': read(CACHE/'claude.json', {'status': 'unconfigured'}),
+                              'updated': time.time()}))
