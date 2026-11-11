@@ -6,12 +6,12 @@ export function duration(minutes) {
     if (minutes % 60 === 0) return `${minutes / 60}시간`;
     return `${minutes}분`;
 }
-export function windowState(window, quota, now = Date.now()/1000) {
+export function windowState(window, quota, now = Date.now()/1000, staleAfter = 300) {
     if (!window || !Number.isFinite(window.remaining) || !Number.isFinite(window.resets_at))
         return {known: false, text: '확인 필요', color: '#87909d'};
     if (now >= window.resets_at)
         return {known: false, text: '리셋 확인 중', color: '#87909d'};
-    const stale = quota.status !== 'ok' || !quota.updated || now-quota.updated > 300;
+    const stale = quota.status !== 'ok' || !quota.updated || now-quota.updated > staleAfter;
     const value = Math.max(0, Math.min(100, window.remaining));
     // Floor so a small positive allowance never rounds up to full allowance.
     return {known: true, value, stale, text: `${Math.floor(value)}%`,
