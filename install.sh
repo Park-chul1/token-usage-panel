@@ -9,7 +9,7 @@ if [[ ! "$shell_version" =~ GNOME\ Shell\ 50[.\ ] ]]; then
     exit 1
 fi
 mkdir -p "$target_dir"
-for name in metadata.json extension.js model.js collector.py quota.py claude_status.py README.md; do
+for name in metadata.json extension.js model.js collector.py quota.py claude_quota.py README.md; do
     install -m 644 "$source_dir/$name" "$target_dir/$name"
 done
 echo 'Installed. Log out and log in, then run:'
