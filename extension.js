@@ -38,7 +38,8 @@ export default class AIUsage extends Extension {
         this._bar = meter(64);
         this._weekly = label('');
         this._apiLabel = label('API …');
-        for (const widget of [this._quotaLabel, this._bar.track, this._weekly, label('│', 'color: #738090;'), this._apiLabel])
+        this._claudeLabel = label('Claude …');
+        for (const widget of [this._quotaLabel, this._bar.track, this._weekly, label('│', 'color: #738090;'), this._claudeLabel, label('│', 'color: #738090;'), this._apiLabel])
             box.add_child(widget);
         this._button.add_child(box);
         Main.panel.addToStatusArea(this.uuid, this._button);
@@ -69,10 +70,15 @@ export default class AIUsage extends Extension {
         paint(this._bar, s);
         this._weekly.text = secondary ? `${duration(secondary.minutes)} ${windowState(secondary, q).text}` : '';
         this._weekly.visible = !!secondary;
+        const c = this._data.claude ?? {};
+        const cw = c.buckets?.[0]?.windows?.[0];
+        const cs = windowState(cw, c, Date.now()/1000, 21900);
+        this._claudeLabel.text = `Claude ${cs.text}${cs.stale ? ' ⚠' : ''}`;
+        this._claudeLabel.style = `color: ${cs.color};`;
         const monthlyApi = Number.isFinite(a.month_usd) ? {...a, display_usd: a.month_usd} : a;
         this._apiLabel.text = `API ${apiText(monthlyApi)}`;
         this._apiLabel.style = '';
-        this._button.accessible_name = `${this._quotaLabel.text} 남음, ${this._weekly.text}, ${this._apiLabel.text} 사용 금액`;
+        this._button.accessible_name = `${this._quotaLabel.text} 남음, ${this._weekly.text}, ${this._claudeLabel.text}, ${this._apiLabel.text} 사용 금액`;
         this._renderMenu();
     }
     _renderMenu() {
@@ -95,6 +101,26 @@ export default class AIUsage extends Extension {
         }
         if (!q.buckets?.length) this._line('한도 확인 필요 · Codex 로그인과 설치 경로 확인');
         if (q.status === 'error') this._line(`조회 실패: ${q.error}`, true);
+        this._button.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        const c = this._data.claude ?? {};
+        this._line('CLAUDE · 남은 구독 사용 한도');
+        for (const bucket of c.buckets ?? []) {
+            for (const w of bucket.windows) {
+                const s = windowState(w, c, Date.now()/1000, 21900);
+                this._line(`${duration(w.minutes)} 한도     ${s.text}${s.known ? ' 남음' : ''}${s.stale ? ' · 이전 값' : ''}`);
+                const item = new PopupMenu.PopupBaseMenuItem({reactive: false});
+                const bar = meter(290, 9);
+                paint(bar, s);
+                item.add_child(bar.track);
+                this._button.menu.addMenuItem(item);
+                this._line(resetText(w), true);
+                this._line(`리셋 ${new Date(w.resets_at*1000).toLocaleString()}`, true);
+            }
+        }
+        if (!c.buckets?.length) this._line('Claude Code 구독 계정 로그인 필요 · README 확인', true);
+        if (c.status === 'error') this._line(`조회 실패: ${c.error} · 이전 값`, true);
+        if (c.updated) this._line(`마지막 조회 ${new Date(c.updated*1000).toLocaleString()}`, true);
+        this._button.menu.addAction('Claude 사용량 업데이트', () => this._refresh(false, true));
         this._button.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this._line('OPENAI API · 사용 금액');
         const monthlyApi = Number.isFinite(a.month_usd) ? {...a, display_usd: a.month_usd} : a;
@@ -131,11 +157,16 @@ export default class AIUsage extends Extension {
             });
         } catch (_) { Main.notify('AI Usage', '초기화 명령을 실행하지 못했습니다.'); }
     }
-    _refresh(force) {
-        if (this._proc || !this._button) return;
+    _refresh(force, claudeForce = false) {
+        if (!this._button) return;
+        if (this._proc) {
+            if (claudeForce) this._claudeRefreshPending = true;
+            return;
+        }
         try {
             const args = ['python3', `${this.path}/collector.py`];
             if (force) args.push('--refresh');
+            if (claudeForce) args.push('--refresh-claude');
             const proc = Gio.Subprocess.new(args, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
             this._proc = proc;
             this._deadline = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 90, () => {
@@ -154,8 +185,10 @@ export default class AIUsage extends Extension {
                     if (!p.get_successful()) throw new Error('collector failed');
                     this._data = JSON.parse(stdout);
                     this._render();
+                    if (claudeForce) Main.notify('AI Usage', this._data.claude?.status === 'ok' ? 'Claude 사용량을 업데이트했습니다.' : `Claude 조회 실패: ${this._data.claude?.error ?? '확인 필요'}`);
                 } catch (_) { this._failed(); }
-                if (this._refreshPending) { this._refreshPending = false; this._refresh(true); }
+                if (this._claudeRefreshPending) { this._claudeRefreshPending = false; this._refresh(false, true); }
+                else if (this._refreshPending) { this._refreshPending = false; this._refresh(true); }
             });
         } catch (_) { this._failed(); }
     }

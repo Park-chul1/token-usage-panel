@@ -7,6 +7,7 @@ import hashlib
 import concurrent.futures
 import tempfile
 import quota
+import claude_quota
 import json
 import os
 from pathlib import Path
@@ -252,6 +253,9 @@ if __name__ == '__main__':
         print(json.dumps(codex()))
     else:
         force = '--refresh-api' in sys.argv or '--refresh' in sys.argv
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
             q, a = pool.submit(quotas, force), pool.submit(api, force)
-            print(json.dumps({'quota': q.result(), 'api': a.result(), 'updated': time.time()}))
+            c = pool.submit(claude_quota.poll, CACHE, read, save, '--refresh-claude' in sys.argv)
+            print(json.dumps({'quota': q.result(), 'api': a.result(),
+                              'claude': c.result(),
+                              'updated': time.time()}))
