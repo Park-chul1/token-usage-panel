@@ -7,12 +7,11 @@ MIT licensed. Korean UI. Independent; not endorsed by OpenAI or GNOME.
 ## UI
 
 - Codex: remaining %, small panel bar, and a separate additional-window percentage.
-- Claude: remaining subscription percentage in the panel; five-hour and weekly windows in the menu.
+- Claude: shown in orange, laid out like Codex — five-hour %, small panel bar, and weekly %.
 - Menu: larger quota bars, countdowns and exact local reset times.
-- Green above 30%; amber at 30% or less; red at 10% or less.
+- Codex: green above 30%; amber at 30% or less; red at 10% or less. Claude bars stay orange until 10% or less, then red.
 - Gray/warning for stale or failed snapshots. After expiry: `리셋 확인 중` until refreshed.
-- API: this month's spend.
-- Menu shows only this month's API spend.
+- API: not shown in the top panel; the menu shows this month's API spend.
 - Bars are read-only indicators, not draggable controls.
 
 ## Requirements
