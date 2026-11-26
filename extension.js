@@ -29,17 +29,25 @@ function paint(bar, state) {
     bar.fill.width = state.known ? bar.width * state.value/100 : 0;
     bar.fill.style = `background-color: ${state.color}; border-radius: ${bar.height/2}px;`;
 }
+const CLAUDE_ORANGE = '#e8875b';
+const CLAUDE_STALE_AFTER = 21900;
+function claudeBarState(state) {
+    // Orange like the label, but keep the low-allowance and stale warnings.
+    if (!state.known || state.stale || state.value <= 10) return state;
+    return {...state, color: CLAUDE_ORANGE};
+}
 export default class AIUsage extends Extension {
     enable() {
-        this._button = new PanelMenu.Button(0.0, 'AI Usage: remaining allowance and API spending', false);
+        this._button = new PanelMenu.Button(0.0, 'AI Usage: remaining Codex and Claude allowance', false);
         const box = new St.BoxLayout({y_align: Clutter.ActorAlign.CENTER,
             style: 'spacing: 8px;'});
         this._quotaLabel = label('Codex …');
         this._bar = meter(64);
         this._weekly = label('');
-        this._apiLabel = label('API …');
-        this._claudeLabel = label('Claude …');
-        for (const widget of [this._quotaLabel, this._bar.track, this._weekly, label('│', 'color: #738090;'), this._claudeLabel, label('│', 'color: #738090;'), this._apiLabel])
+        this._claudeLabel = label('Claude …', `color: ${CLAUDE_ORANGE};`);
+        this._claudeBar = meter(64);
+        this._claudeWeekly = label('', `color: ${CLAUDE_ORANGE};`);
+        for (const widget of [this._quotaLabel, this._bar.track, this._weekly, label('│', 'color: #738090;'), this._claudeLabel, this._claudeBar.track, this._claudeWeekly])
             box.add_child(widget);
         this._button.add_child(box);
         Main.panel.addToStatusArea(this.uuid, this._button);
@@ -71,14 +79,15 @@ export default class AIUsage extends Extension {
         this._weekly.text = secondary ? `${duration(secondary.minutes)} ${windowState(secondary, q).text}` : '';
         this._weekly.visible = !!secondary;
         const c = this._data.claude ?? {};
-        const cw = c.buckets?.[0]?.windows?.[0];
-        const cs = windowState(cw, c, Date.now()/1000, 21900);
+        const cWindows = c.buckets?.[0]?.windows ?? [];
+        const cPrimary = cWindows.find(w => w.kind === 'primary') ?? cWindows[0];
+        const cSecondary = cWindows.find(w => w !== cPrimary);
+        const cs = windowState(cPrimary, c, Date.now()/1000, CLAUDE_STALE_AFTER);
         this._claudeLabel.text = `Claude ${cs.text}${cs.stale ? ' ⚠' : ''}`;
-        this._claudeLabel.style = `color: ${cs.color};`;
-        const monthlyApi = Number.isFinite(a.month_usd) ? {...a, display_usd: a.month_usd} : a;
-        this._apiLabel.text = `API ${apiText(monthlyApi)}`;
-        this._apiLabel.style = '';
-        this._button.accessible_name = `${this._quotaLabel.text} 남음, ${this._weekly.text}, ${this._claudeLabel.text}, ${this._apiLabel.text} 사용 금액`;
+        paint(this._claudeBar, claudeBarState(cs));
+        this._claudeWeekly.text = cSecondary ? `${duration(cSecondary.minutes)} ${windowState(cSecondary, c, Date.now()/1000, CLAUDE_STALE_AFTER).text}` : '';
+        this._claudeWeekly.visible = !!cSecondary;
+        this._button.accessible_name = `${this._quotaLabel.text} 남음, ${this._weekly.text}, ${this._claudeLabel.text} 남음, ${this._claudeWeekly.text}`;
         this._renderMenu();
     }
     _renderMenu() {
@@ -106,11 +115,11 @@ export default class AIUsage extends Extension {
         this._line('CLAUDE · 남은 구독 사용 한도');
         for (const bucket of c.buckets ?? []) {
             for (const w of bucket.windows) {
-                const s = windowState(w, c, Date.now()/1000, 21900);
+                const s = windowState(w, c, Date.now()/1000, CLAUDE_STALE_AFTER);
                 this._line(`${duration(w.minutes)} 한도     ${s.text}${s.known ? ' 남음' : ''}${s.stale ? ' · 이전 값' : ''}`);
                 const item = new PopupMenu.PopupBaseMenuItem({reactive: false});
                 const bar = meter(290, 9);
-                paint(bar, s);
+                paint(bar, claudeBarState(s));
                 item.add_child(bar.track);
                 this._button.menu.addMenuItem(item);
                 this._line(resetText(w), true);
@@ -201,7 +210,7 @@ export default class AIUsage extends Extension {
             this._render();
         } else {
             this._quotaLabel.text = 'Codex 확인 필요';
-            this._apiLabel.text = 'API 확인 필요';
+            this._claudeLabel.text = 'Claude 확인 필요';
         }
     }
     disable() {
@@ -214,6 +223,7 @@ export default class AIUsage extends Extension {
         this._proc?.force_exit();
         this._proc = null;
         this._button?.destroy();
-        this._button = this._data = this._quotaLabel = this._apiLabel = this._bar = this._weekly = null;
+        this._button = this._data = this._quotaLabel = this._bar = this._weekly = null;
+        this._claudeLabel = this._claudeBar = this._claudeWeekly = null;
     }
 }
